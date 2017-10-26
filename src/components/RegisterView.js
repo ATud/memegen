@@ -19,7 +19,8 @@ class RegisterView extends Component {
     }
 
     renderEmail() {
-        if (this.state.invalidEmail===true) {
+        debugger;
+        if (this.state.invalidEmail) {
             return (
                 <Icon name='close-circle' style={{color: 'red'}}/>
             );
@@ -80,9 +81,9 @@ class RegisterView extends Component {
             console.log("error " + error);
         }
     }
-   async getUserByEmail(text){
-        try{
-            let emailCount = await fetch('http://10.0.3.2:9000/getUserByEmail',{
+   getUserByEmail =  () =>{
+
+           fetch('http://10.0.3.2:9000/getUserByEmail',{
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -91,27 +92,31 @@ class RegisterView extends Component {
                 body: JSON.stringify({
                     email: this.state.email
                 })
-            });
-            debugger;
-            let res = await emailCount.text();
-            console.log(res);
-            if (res>0){
-              console.log("error");
-            }else{
-                console.log("success");
-            }
-        }catch (error) {
-            console.log("error " + error);
-            this.setState({invalidEmail: true});
-        }
+            }).then((response) => response.json())
+               .then((responseJson) => {
+                   console.log(responseJson);
+                   if (responseJson>0){
+                       console.log("error");
+                       this.setState({invalidEmail:true});
+                       this.setState({email:''});
+                   }else{
+                       this.setState({invalidEmail:false});
+                   }
+               })
+               .catch((error) => {
+                   console.error(error);
+               });
+
+
+
     }
     validateEmail =  (text) => {
         console.log(text);
 
         let reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
         if (reg.test(text) === true) {
-
-            this.debounce(this.getUserByEmail, text, 300)
+            this.setState({email: text});
+          this.getUserByEmail();
         }
         else {
             console.log("Email is Not Correct");
@@ -137,7 +142,8 @@ class RegisterView extends Component {
 
     throttle(fn, text, threshhold, scope) {
         threshhold || (threshhold = 250);
-        let  deferTimer;
+
+        let  deferTimer, last;
         let context = scope || this;
 
         let now = +new Date,
@@ -175,7 +181,7 @@ class RegisterView extends Component {
                             <Icon active name='mail'/>
                             <Input
                                 style={{height: 40, padding: 5, margin: 10}}
-                                onEndEditing={(text) => this.throttle(this.validateEmail, text, 300 , this)}
+                                onChangeText={(text) => this.throttle(this.validateEmail, text, 300 , this)}
                                 placeholder="Email"
                                 secureTextEntry={true}
                                 keyboardType="email-address"
