@@ -9,22 +9,35 @@ class RegisterView extends Component {
             email: '',
             invalidEmail: null,
             invalidUser: null,
+            invalidPassword: null,
             password: '',
             description: 'Descriere',
             avatarUrl: '',
             age: null,
-            last: +new Date
+            lastThrottleCheck: +new Date,
+
 
         };
     }
 
     renderEmail() {
-        debugger;
-        if (this.state.invalidEmail) {
+        if (this.state.invalidEmail===true) {
             return (
                 <Icon name='close-circle' style={{color: 'red'}}/>
             );
         }   if (this.state.invalidEmail===false) {
+            return (
+                <Icon name='checkmark-circle' style={{color: 'green'}}/>
+            );
+        }
+    }
+    renderPassword() {
+
+        if (this.state.invalidPassword===true) {
+            return (
+                <Icon name='close-circle' style={{color: 'red'}}/>
+            );
+        }   if (this.state.invalidPassword===false) {
             return (
                 <Icon name='checkmark-circle' style={{color: 'green'}}/>
             );
@@ -43,7 +56,6 @@ class RegisterView extends Component {
     }
     async onRegisterPressed() {
         try {
-            debugger;
             let response = await fetch('http://10.0.3.2:9000/api/users/create', {
                 method: 'POST',
                 headers: {
@@ -83,7 +95,7 @@ class RegisterView extends Component {
     }
    getUserByEmail =  () =>{
 
-           fetch('http://10.0.3.2:9000/getUserByEmail',{
+           fetch(global.hostAddress + '/getUserByEmail',{
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -107,9 +119,37 @@ class RegisterView extends Component {
                    console.error(error);
                });
 
+    };
+   getUserByUserName =  (text) =>{
+
+           fetch(global.hostAddress + '/getUserByUserName',{
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: text
+                })
+            }).then((response) => response.json())
+               .then((responseJson) => {
+                   console.log(responseJson);
+                   if (responseJson>0){
+                       console.log("error");
+                       this.setState({invalidUser:true});
+                       this.setState({email:''});
+                   }else{
+                       this.setState({invalidUser:false});
+                       this.setState({user:false});
+                   }
+               })
+               .catch((error) => {
+                   console.error(error);
+               });
 
 
-    }
+
+    };
     validateEmail =  (text) => {
         console.log(text);
 
@@ -126,42 +166,39 @@ class RegisterView extends Component {
         }
     };
 
-
-    debounce(f,text, delay){
-        let timer = null;
-
-            debugger;
-            let context = this, args = arguments;
-            clearTimeout(timer);
-            timer = setTimeout(() =>{
-                    f(text);
-                },
-                delay || 500);
-
-    }
-
     throttle(fn, text, threshhold, scope) {
         threshhold || (threshhold = 250);
 
-        let  deferTimer, last;
+        let  deferTimer;
         let context = scope || this;
 
         let now = +new Date,
             args = arguments;
-        if ( now - this.state.last >  threshhold) {
+        if ( now - this.state.lastThrottleCheck >  threshhold) {
             // hold on to it
             clearTimeout(deferTimer);
-            debugger;
             deferTimer = setTimeout(() => {
-                this.setState({last: now});
+                this.setState({lastThrottleCheck: now});
                 fn(text);
             }, threshhold);
         } else {
-            context.setState({last: now});
+            context.setState({lastThrottleCheck: now});
         }
     };
-    static validateUserName(text, delay){
-        console.log(text);
+    validateUserName = (text) =>{
+        if(text.length>4){
+            this.getUserByUserName(text)
+        }else{
+            this.setState({invalidUser:true})
+        }
+
+    };
+    validatePassword = (text) =>{
+        if(text.length>6){
+            this.setState({invalidPassword:false})
+        }else{
+            this.setState({invalidPassword:true})
+        }
 
     };
     render() {
@@ -173,7 +210,7 @@ class RegisterView extends Component {
                         <Item>
                             <Icon active name='person'/>
                             <Input placeholder='Username'
-                                   onChangeText={(text) => RegisterView.validateUserName(text)}
+                                   onChangeText={(text) =>  this.throttle(this.validateUserName, text, 300 , this)}
                                    style={{height: 40, padding: 5, margin: 10}}/>
                             {this.renderUserName()}
                         </Item>
@@ -195,7 +232,7 @@ class RegisterView extends Component {
                             <Input placeholder="Password"
                                    style={{height: 40, padding: 5, margin: 10}}
                                    secureTextEntry={true}
-                                   onChangeText={(text) => this.setState({password:text})}
+                                   onChangeText={(text) => this.throttle(this.validatePassword, text, 300 , this)}
                             />
                         </Item>
                         <Item >
